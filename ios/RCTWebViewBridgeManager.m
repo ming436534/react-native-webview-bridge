@@ -9,16 +9,12 @@
  * LICENSE file in the root directory of this source tree. An additional grant
  * of patent rights can be found in the PATENTS file in the same directory.
  */
-#if __has_include(<React/RCTWebViewBridgeManager.h>)
-#import <React/RCTWebViewBridgeManager.h>
-#import <React/RCTBridge.h>
+#if __has_include(<React/RCTUIManager.h>)
 #import <React/RCTUIManager.h>
 #else
-#import "RCTWebViewBridgeManager.h"
-#import "RCTBridge.h"
 #import "RCTUIManager.h"
 #endif
-
+#import "RCTWebViewBridgeManager.h"
 #import "RCTWebViewBridge.h"
 #import "UIView+React.h"
 
