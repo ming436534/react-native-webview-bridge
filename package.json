@@ -29,6 +29,9 @@
     "url": "https://github.com/alinz/react-native-webview-bridge/issues"
   },
   "homepage": "https://github.com/alinz/react-native-webview-bridge",
+  "peerDependencies": {
+    "prop-types": "^15.6.1"
+  },
   "dependencies": {
     "invariant": "2.2.0",
     "keymirror": "0.1.1"
