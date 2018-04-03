@@ -4,6 +4,7 @@ import android.os.Build;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
+import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.annotations.ReactProp;
@@ -17,6 +18,7 @@ public class WebViewBridgeManager extends ReactWebViewManager {
     private static final String REACT_CLASS = "RCTWebViewBridge";
     
     public static final int COMMAND_SEND_TO_BRIDGE = 101;
+    public static final int COMMAND_RESET_SOURCE = 102;
     
     @Override
     public String getName() {
@@ -30,6 +32,7 @@ public class WebViewBridgeManager extends ReactWebViewManager {
         Map<String, Integer> commandsMap = super.getCommandsMap();
         
         commandsMap.put("sendToBridge", COMMAND_SEND_TO_BRIDGE);
+        commandsMap.put("resetSource", COMMAND_RESET_SOURCE);
         
         return commandsMap;
     }
@@ -56,6 +59,11 @@ public class WebViewBridgeManager extends ReactWebViewManager {
             default:
                 //do nothing!!!!
         }
+    }
+
+    private void resetSource(WebView root) {
+        String o = root.getOriginalUrl();
+        root.loadUrl(o);
     }
     
     private void sendToBridge(WebView root, String message) {

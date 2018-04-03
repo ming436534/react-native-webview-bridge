@@ -143,6 +143,32 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
     [_webView loadRequest:request];
   }
 }
+- (void)resetSource
+{
+    [_webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"about:blank"]]];
+    // Check for a static html source first
+    NSString *html = [RCTConvert NSString:_source[@"html"]];
+    if (html) {
+        NSURL *baseURL = [RCTConvert NSURL:_source[@"baseUrl"]];
+        [_webView loadHTMLString:html baseURL:baseURL];
+        return;
+    }
+    
+    NSURLRequest *request = [RCTConvert NSURLRequest:_source];
+    // Because of the way React works, as pages redirect, we actually end up
+    // passing the redirect urls back here, so we ignore them if trying to load
+    // the same url. We'll expose a call to 'reload' to allow a user to load
+    // the existing page.
+//    if ([request.URL isEqual:_webView.request.URL]) {
+//        return;
+//    }
+    if (!request.URL) {
+        // Clear the webview
+        [_webView loadHTMLString:@"" baseURL:nil];
+        return;
+    }
+    [_webView loadRequest:request];
+}
 
 - (void)layoutSubviews
 {
@@ -304,6 +330,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
 
     NSMutableDictionary<NSString *, id> *event = [self baseEvent];
     event[@"jsEvaluationValue"] = jsEvaluationValue;
+    
 
     _onLoadingFinish(event);
   }

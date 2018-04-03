@@ -228,6 +228,14 @@ class WebViewBridge extends React.Component {
     );
   }
 
+  resetSource = () => {
+    UIManager.dispatchViewManagerCommand(
+      this.getWebViewBridgeHandle(),
+      UIManager.RCTWebViewBridge.Commands.resetSource,
+      null
+    );
+  }
+
   sendToBridge = (message: string) => {
     WebViewBridgeManager.sendToBridge(this.getWebViewBridgeHandle(), message);
   }
@@ -257,7 +265,7 @@ class WebViewBridge extends React.Component {
     var {onError, onLoadEnd} = this.props;
     onError && onError(event);
     onLoadEnd && onLoadEnd(event);
-    console.warn('Encountered an error loading page', event.nativeEvent);
+    // console.warn('Encountered an error loading page', event.nativeEvent);
 
     this.setState({
       lastErrorEvent: event.nativeEvent,

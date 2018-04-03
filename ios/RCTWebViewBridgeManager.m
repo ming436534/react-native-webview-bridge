@@ -32,7 +32,7 @@ RCT_EXPORT_MODULE()
 
 - (UIView *)view
 {
-  RCTWebViewBridge *webView = [RCTWebViewBridge new];
+  RCTWebViewBridge *webView = [[RCTWebViewBridge alloc] init];
   webView.delegate = self;
   return webView;
 }
@@ -101,6 +101,18 @@ RCT_EXPORT_METHOD(reload:(nonnull NSNumber *)reactTag)
       [view reload];
     }
   }];
+}
+
+RCT_EXPORT_METHOD(resetSource:(nonnull NSNumber *)reactTag)
+{
+    [self.bridge.uiManager addUIBlock:^(__unused RCTUIManager *uiManager, NSDictionary<NSNumber *, RCTWebViewBridge *> *viewRegistry) {
+        RCTWebViewBridge *view = viewRegistry[reactTag];
+        if (![view isKindOfClass:[RCTWebViewBridge class]]) {
+            RCTLogError(@"Invalid view returned from registry, expecting RCTWebViewBridge, got: %@", view);
+        } else {
+            [view resetSource];
+        }
+    }];
 }
 
 RCT_EXPORT_METHOD(sendToBridge:(nonnull NSNumber *)reactTag
