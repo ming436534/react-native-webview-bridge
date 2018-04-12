@@ -43,7 +43,9 @@ var WebViewBridgeState = keyMirror({
   ERROR: null,
 });
 
-var RCTWebViewBridge = requireNativeComponent('RCTWebViewBridge', WebViewBridge);
+var RCTWebViewBridge = requireNativeComponent('RCTWebViewBridge', WebViewBridge, {
+  nativeOnly: {onLongPressSelect: true}
+});
 
 /**
  * Renders a native WebView.
@@ -57,6 +59,7 @@ class WebViewBridge extends React.Component {
      * Will be called once the message is being sent from webview
      */
     onBridgeMessage: PropTypes.func,
+    onLongPressSelect: PropTypes.func
   };
 
   state = {
@@ -125,6 +128,7 @@ class WebViewBridge extends React.Component {
         onLoadingFinish={this.onLoadingFinish}
         onLoadingError={this.onLoadingError}
         onChange={this.onMessage}
+        onLongPressSelect={this.onLongPressSelect}
       />;
 
     return (
@@ -134,6 +138,13 @@ class WebViewBridge extends React.Component {
       </View>
     );
   };
+
+  onLongPressSelect = ({nativeEvent}) => {
+    console.log(nativeEvent);
+    if (nativeEvent && nativeEvent.url) {
+      this.props.onLongPressSelect && this.props.onLongPressSelect(nativeEvent.url);
+    }
+  }
 
   onMessage = (event) => {
     if (this.props.onBridgeMessage != null && event.nativeEvent != null) {

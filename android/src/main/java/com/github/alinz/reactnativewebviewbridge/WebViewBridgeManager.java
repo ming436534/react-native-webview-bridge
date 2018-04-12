@@ -1,24 +1,33 @@
 package com.github.alinz.reactnativewebviewbridge;
 
 import android.os.Build;
+import android.view.ContextMenu;
+import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 
+import com.afollestad.materialdialogs.MaterialDialog;
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
+import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.common.MapBuilder;
 import com.facebook.react.uimanager.ThemedReactContext;
 import com.facebook.react.uimanager.annotations.ReactProp;
+import com.facebook.react.uimanager.events.RCTEventEmitter;
 import com.facebook.react.views.webview.ReactWebViewManager;
 
 import java.util.Map;
 
 import javax.annotation.Nullable;
 
-public class WebViewBridgeManager extends ReactWebViewManager {
+public class WebViewBridgeManager extends ReactWebViewManager implements View.OnCreateContextMenuListener {
     private static final String REACT_CLASS = "RCTWebViewBridge";
     
     public static final int COMMAND_SEND_TO_BRIDGE = 101;
     public static final int COMMAND_RESET_SOURCE = 102;
+
+    public ThemedReactContext ctx;
     
     @Override
     public String getName() {
@@ -40,11 +49,13 @@ public class WebViewBridgeManager extends ReactWebViewManager {
     @Override
     protected WebView createViewInstance(ThemedReactContext reactContext) {
         WebView root = super.createViewInstance(reactContext);
+        ctx = reactContext;
         WebSettings webSettings = root.getSettings();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
         }
         root.addJavascriptInterface(new JavascriptBridge(root), "WebViewBridge");
+        root.setOnCreateContextMenuListener(this);
         return root;
     }
     
@@ -89,5 +100,31 @@ public class WebViewBridgeManager extends ReactWebViewManager {
     @ReactProp(name = "allowUniversalAccessFromFileURLs")
     public void setAllowUniversalAccessFromFileURLs(WebView root, boolean allows) {
         root.getSettings().setAllowUniversalAccessFromFileURLs(allows);
+    }
+
+    @Override
+    public void onCreateContextMenu(ContextMenu contextMenu, View view, ContextMenu.ContextMenuInfo contextMenuInfo) {
+        WebView wv = (WebView)view;
+        WebView.HitTestResult rs = wv.getHitTestResult();
+        final String url = rs.getExtra();
+        if (url == null) {
+            return;
+        }
+        WritableMap event = Arguments.createMap();
+        event.putString("url", url);
+        ctx.getJSModule(RCTEventEmitter.class).receiveEvent(
+            wv.getId(),
+            "WVB_LONG_PRESS",
+            event
+        );
+    }
+    public Map getExportedCustomBubblingEventTypeConstants() {
+        return MapBuilder.builder()
+                .put(
+                        "WVB_LONG_PRESS",
+                        MapBuilder.of(
+                                "phasedRegistrationNames",
+                                MapBuilder.of("bubbled", "onLongPressSelect")))
+                .build();
     }
 }
