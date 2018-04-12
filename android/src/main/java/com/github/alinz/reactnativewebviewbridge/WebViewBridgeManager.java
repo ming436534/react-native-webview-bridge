@@ -56,6 +56,8 @@ public class WebViewBridgeManager extends ReactWebViewManager {
             case COMMAND_SEND_TO_BRIDGE:
                 sendToBridge(root, args.getString(0));
                 break;
+            case COMMAND_RESET_SOURCE:
+                resetSource(root);
             default:
                 //do nothing!!!!
         }
