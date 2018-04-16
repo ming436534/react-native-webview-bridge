@@ -5,8 +5,6 @@ import android.view.ContextMenu;
 import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-
-import com.afollestad.materialdialogs.MaterialDialog;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableArray;
