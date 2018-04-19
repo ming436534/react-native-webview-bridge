@@ -48,6 +48,7 @@ shouldStartLoadForRequest:(NSMutableDictionary<NSString *, id> *)request
 - (void)goBack;
 - (void)reload;
 - (void)resetSource;
+- (void)stopLoading;
 - (void)sendToBridge:(NSString *)message;
 
 @end
