@@ -220,15 +220,6 @@ class WebViewBridge extends React.Component {
     );
   }
 
-  stopLoading = () => {
-    console.log('stop loading');
-    UIManager.dispatchViewManagerCommand(
-      this.getWebViewBridgeHandle(),
-      UIManager.RCTWebViewBridge.Commands.stopLoading,
-      null
-    );
-  };
-
   reload = () => {
     UIManager.dispatchViewManagerCommand(
       this.getWebViewBridgeHandle(),
@@ -236,6 +227,17 @@ class WebViewBridge extends React.Component {
       null
     );
   }
+
+  /**
+   * Stop loading the current page.
+   */
+  stopLoading = () => {
+    UIManager.dispatchViewManagerCommand(
+      this.getWebViewBridgeHandle(),
+      UIManager.RCTWebViewBridge.Commands.stopLoading,
+      null
+    );
+  };
 
   resetSource = () => {
     UIManager.dispatchViewManagerCommand(

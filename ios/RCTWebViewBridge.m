@@ -95,7 +95,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
 
 - (void)stopLoading
 {
-  [_webView stopLoading];
+    [_webView stopLoading];
 }
 
 - (void)sendToBridge:(NSString *)message
