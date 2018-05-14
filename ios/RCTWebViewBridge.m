@@ -133,6 +133,8 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
     }
 
     NSURLRequest *request = [RCTConvert NSURLRequest:source];
+      NSMutableURLRequest *mutableRequest = [request mutableCopy];
+      mutableRequest.cachePolicy = NSURLRequestReturnCacheDataElseLoad;
     // Because of the way React works, as pages redirect, we actually end up
     // passing the redirect urls back here, so we ignore them if trying to load
     // the same url. We'll expose a call to 'reload' to allow a user to load
@@ -145,7 +147,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
       [_webView loadHTMLString:@"" baseURL:nil];
       return;
     }
-    [_webView loadRequest:request];
+    [_webView loadRequest:mutableRequest];
   }
 }
 - (void)resetSource
@@ -160,6 +162,9 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
     }
     
     NSURLRequest *request = [RCTConvert NSURLRequest:_source];
+    NSMutableURLRequest *mutableRequest = [request mutableCopy];
+    mutableRequest.cachePolicy = NSURLRequestReturnCacheDataElseLoad;
+    
     // Because of the way React works, as pages redirect, we actually end up
     // passing the redirect urls back here, so we ignore them if trying to load
     // the same url. We'll expose a call to 'reload' to allow a user to load
@@ -172,7 +177,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
         [_webView loadHTMLString:@"" baseURL:nil];
         return;
     }
-    [_webView loadRequest:request];
+    [_webView loadRequest:mutableRequest];
 }
 
 - (void)layoutSubviews
