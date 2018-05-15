@@ -105,6 +105,7 @@ class WebViewBridge extends React.Component {
     hideKeyboardAccessoryView: PropTypes.bool,
   
     keyboardDisplayRequiresUserAction: PropTypes.bool,
+    shouldCache: PropTypes.bool
   }
   statics = {
     JSNavigationScheme: JSNavigationScheme,
@@ -194,6 +195,7 @@ class WebViewBridge extends React.Component {
         onLoadingError={this.onLoadingError}
         onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
         onBridgeMessage={onBridgeMessage}
+        shouldCache={this.props.shouldCache || false}
       />;
 
     return (

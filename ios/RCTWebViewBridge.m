@@ -72,6 +72,8 @@ NSString *const RCTWebViewBridgeSchema = @"wvb";
     _webView = [[UIWebView alloc] initWithFrame:self.bounds];
     _webView.delegate = self;
     [self addSubview:_webView];
+    _shouldCache = NO;
+
   }
   return self;
 }
@@ -133,8 +135,8 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
     }
 
     NSURLRequest *request = [RCTConvert NSURLRequest:source];
-      NSMutableURLRequest *mutableRequest = [request mutableCopy];
-      mutableRequest.cachePolicy = NSURLRequestReturnCacheDataElseLoad;
+    NSMutableURLRequest *mutableRequest = [request mutableCopy];
+    if (_shouldCache) mutableRequest.cachePolicy = NSURLRequestReturnCacheDataElseLoad;
     // Because of the way React works, as pages redirect, we actually end up
     // passing the redirect urls back here, so we ignore them if trying to load
     // the same url. We'll expose a call to 'reload' to allow a user to load
@@ -163,7 +165,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
     
     NSURLRequest *request = [RCTConvert NSURLRequest:_source];
     NSMutableURLRequest *mutableRequest = [request mutableCopy];
-    mutableRequest.cachePolicy = NSURLRequestReturnCacheDataElseLoad;
+    if (_shouldCache) mutableRequest.cachePolicy = NSURLRequestReturnCacheDataElseLoad;
     
     // Because of the way React works, as pages redirect, we actually end up
     // passing the redirect urls back here, so we ignore them if trying to load
