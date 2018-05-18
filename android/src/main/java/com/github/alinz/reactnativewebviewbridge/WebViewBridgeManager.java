@@ -24,6 +24,7 @@ public class WebViewBridgeManager extends ReactWebViewManager implements View.On
     
     public static final int COMMAND_SEND_TO_BRIDGE = 101;
     public static final int COMMAND_RESET_SOURCE = 102;
+    public static final int COMMAND_STOP_LOADING= 103;
 
     public ThemedReactContext ctx;
     
@@ -40,6 +41,7 @@ public class WebViewBridgeManager extends ReactWebViewManager implements View.On
         
         commandsMap.put("sendToBridge", COMMAND_SEND_TO_BRIDGE);
         commandsMap.put("resetSource", COMMAND_RESET_SOURCE);
+        commandsMap.put("stopLoading", COMMAND_STOP_LOADING);
         
         return commandsMap;
     }
@@ -67,6 +69,8 @@ public class WebViewBridgeManager extends ReactWebViewManager implements View.On
                 break;
             case COMMAND_RESET_SOURCE:
                 resetSource(root);
+            case COMMAND_STOP_LOADING:
+                stopLoading(root);
             default:
                 //do nothing!!!!
         }
@@ -75,6 +79,10 @@ public class WebViewBridgeManager extends ReactWebViewManager implements View.On
     private void resetSource(WebView root) {
         String o = root.getOriginalUrl();
         root.loadUrl(o);
+    }
+
+    private void stopLoading(WebView root) {
+        root.stopLoading();
     }
     
     private void sendToBridge(WebView root, String message) {

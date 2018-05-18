@@ -176,6 +176,14 @@ class WebViewBridge extends React.Component {
     );
   }
 
+  stopLoading = () => {
+    UIManager.dispatchViewManagerCommand(
+      this.getWebViewBridgeHandle(),
+      UIManager.RCTWebViewBridge.Commands.stopLoading,
+      null
+    );
+  }
+
   reload = () => {
     UIManager.dispatchViewManagerCommand(
       this.getWebViewBridgeHandle(),
