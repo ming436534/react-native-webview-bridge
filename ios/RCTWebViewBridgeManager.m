@@ -87,7 +87,8 @@ RCT_EXPORT_METHOD(goForward:(nonnull NSNumber *)reactTag)
     if (![view isKindOfClass:[RCTWebViewBridge class]]) {
       RCTLogError(@"Invalid view returned from registry, expecting RCTWebViewBridge, got: %@", view);
     } else {
-      [view goForward];
+      RCTWebViewBridge* v = view;
+      [v goForward];
     }
   }];
 }

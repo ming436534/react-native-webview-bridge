@@ -250,7 +250,9 @@ class WebViewBridge extends React.Component {
   }
 
   sendToBridge = (message: string) => {
-    WebViewBridgeManager.sendToBridge(this.getWebViewBridgeHandle(), message);
+    if (this.getWebViewBridgeHandle()) {
+      WebViewBridgeManager.sendToBridge(this.getWebViewBridgeHandle(), message);
+    }
   }
 
   /**
