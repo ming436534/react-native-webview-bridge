@@ -182,6 +182,9 @@ class WebViewBridge extends React.Component {
     let {source, ...props} = {...this.props};
     delete props.onBridgeMessage;
     delete props.onShouldStartLoadWithRequest;
+    delete props.scalesPageToFit;
+    delete props.allowMixedContent;
+    delete props.allowWebContentsDebugging;
 
     var webView =
       <RCTWebViewBridge

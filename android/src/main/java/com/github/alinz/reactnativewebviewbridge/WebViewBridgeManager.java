@@ -133,4 +133,21 @@ public class WebViewBridgeManager extends ReactWebViewManager implements View.On
                                 MapBuilder.of("bubbled", "onLongPressSelect")))
                 .build();
     }
+    @ReactProp(name = "allowWebContentsDebugging")
+    public void setAllowWebContentsDebugging(WebView root, boolean allows) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            root.setWebContentsDebuggingEnabled(allows);
+        }
+    }
+
+    @ReactProp(name = "allowMixedContent")
+    public void setAllowMixedContent(WebView root, boolean allows) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            if (allows) {
+                root.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            } else {
+                root.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+            }
+        }
+    }
 }
