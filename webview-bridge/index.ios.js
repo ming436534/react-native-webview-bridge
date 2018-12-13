@@ -105,7 +105,8 @@ class WebViewBridge extends React.Component {
     hideKeyboardAccessoryView: PropTypes.bool,
   
     keyboardDisplayRequiresUserAction: PropTypes.bool,
-    shouldCache: PropTypes.bool
+    shouldCache: PropTypes.bool,
+    userScript: PropTypes.string
   }
   statics = {
     JSNavigationScheme: JSNavigationScheme,
@@ -173,9 +174,12 @@ class WebViewBridge extends React.Component {
       const onBridgeMessageCallback = this.props.onBridgeMessage;
       if (onBridgeMessageCallback) {
         const messages = event.nativeEvent.messages;
-        messages.forEach((message) => {
-          onBridgeMessageCallback(message);
-        });
+        console.log(messages);
+        if (messages.forEach) {
+          messages.forEach((message) => {
+            onBridgeMessageCallback(message);
+          });
+        }
       }
     };
 

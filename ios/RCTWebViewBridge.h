@@ -43,6 +43,7 @@ shouldStartLoadForRequest:(NSMutableDictionary<NSString *, id> *)request
 @property (nonatomic, assign) BOOL automaticallyAdjustContentInsets;
 @property (nonatomic, assign) BOOL hideKeyboardAccessoryView;
 @property (nonatomic, copy) NSString *injectedJavaScript;
+@property (nonatomic) NSString *userScript;
 @property (nonatomic, assign) BOOL shouldCache;
 
 - (void)goForward;
@@ -50,6 +51,7 @@ shouldStartLoadForRequest:(NSMutableDictionary<NSString *, id> *)request
 - (void)reload;
 - (void)stopLoading;
 - (void)resetSource;
+- (void)unmountWebview;
 - (void)sendToBridge:(NSString *)message;
 
 @end

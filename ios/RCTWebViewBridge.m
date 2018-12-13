@@ -50,6 +50,23 @@ NSString *const RCTWebViewBridgeSchema = @"wvb";
 }
 @end
 
+@interface _LeakAvoider : NSObject <WKScriptMessageHandler>
+@property (nonatomic, weak) id delegate;
+@end
+
+@implementation _LeakAvoider
+-(id)init:(id)delegate {
+  self = [super init];
+  self.delegate = delegate;
+  return self;
+}
+-(void) userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message {
+  if (self.delegate) {
+    [self.delegate userContentController:userContentController didReceiveScriptMessage:message];
+  }
+}
+@end
+
 @interface RCTWebViewBridge () <WKUIDelegate, WKNavigationDelegate, WKScriptMessageHandler, RCTAutoInsetsProtocol>
 
 @property (nonatomic, copy) RCTDirectEventBlock onLoadingStart;
@@ -64,8 +81,9 @@ NSString *const RCTWebViewBridgeSchema = @"wvb";
 {
   WKWebView *_webView;
   NSString *_injectedJavaScript;
-  bool _shouldTrackLoadingStart;
-}
+  NSString *_userScript;
+  WKUserContentController *_controller;}
+  NSString* prevURL;
 
 - (instancetype)initWithFrame:(CGRect)frame
 {
@@ -73,11 +91,9 @@ NSString *const RCTWebViewBridgeSchema = @"wvb";
     super.backgroundColor = [UIColor clearColor];
     _automaticallyAdjustContentInsets = YES;
     _contentInset = UIEdgeInsetsZero;
-    _shouldTrackLoadingStart = NO;
     [self setupWebview];
     [self addSubview:_webView];
     _shouldCache = NO;
-
   }
   return self;
 }
@@ -160,6 +176,12 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
     [_webView loadRequest:mutableRequest];
   }
 }
+-(void)setUserScript:(NSString *)userScript {
+  _userScript = userScript;
+  WKUserScript* generated = [[WKUserScript alloc] initWithSource:[self webViewBridgeScript] injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:true];
+  [_controller addUserScript:generated];
+}
+
 - (void)resetSource
 {
     [_webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"about:blank"]]];
@@ -270,18 +292,27 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
 #pragma mark - WebKit WebView Setup and JS Handler
 
 -(void)setupWebview {
-    WKWebViewConfiguration *theConfiguration = [[WKWebViewConfiguration alloc] init];
-    WKUserContentController *controller = [[WKUserContentController alloc]init];
-    [controller addScriptMessageHandler:self name:@"observe"];
+  WKWebViewConfiguration *theConfiguration = [[WKWebViewConfiguration alloc] init];
+  WKUserContentController *controller = [[WKUserContentController alloc]init];
+  _controller = controller;
+  [controller addScriptMessageHandler:[[_LeakAvoider alloc] init:self] name:@"observe"];
+  WKUserScript* userScript = [[WKUserScript alloc] initWithSource:[self webViewBridgeScript] injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:true];
+  [controller addUserScript:userScript];
+  [theConfiguration setUserContentController:controller];
+  theConfiguration.allowsInlineMediaPlayback = NO;
+  
+  _webView = [[WKWebView alloc] initWithFrame:self.bounds configuration:theConfiguration];
+  _webView.UIDelegate = self;
+  _webView.navigationDelegate = self;
+  
+  [[NSHTTPCookieStorage sharedHTTPCookieStorage] setCookieAcceptPolicy:NSHTTPCookieAcceptPolicyAlways];
+}
 
-    [theConfiguration setUserContentController:controller];
-    theConfiguration.allowsInlineMediaPlayback = NO;
-
-    _webView = [[WKWebView alloc] initWithFrame:self.bounds configuration:theConfiguration];
-    _webView.UIDelegate = self;
-    _webView.navigationDelegate = self;
-
-    [[NSHTTPCookieStorage sharedHTTPCookieStorage] setCookieAcceptPolicy:NSHTTPCookieAcceptPolicyAlways];
+-(void)dealloc {
+  [_webView stopLoading];
+  [_controller removeAllUserScripts];
+  [_controller removeScriptMessageHandlerForName:@"observe"];
+  _controller = NULL;
 }
 
 -(void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message{
@@ -308,34 +339,32 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
 
 #pragma mark - WebKit WebView Delegate methods
 
-- (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation
-{
-  _shouldTrackLoadingStart = YES;
+- (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation{
 }
 
 -(void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler{
-  if (_onLoadingStart && _shouldTrackLoadingStart) {
-    _shouldTrackLoadingStart = NO;
-    NSMutableDictionary<NSString *, id> *event = [self baseEvent];
-    [event addEntriesFromDictionary: @{
-      @"url": (navigationAction.request.URL).absoluteString,
-      @"navigationType": @(navigationAction.navigationType)
-    }];
-    _onLoadingStart(event);
-  }
-
   if (_onShouldStartLoadWithRequest) {
     NSMutableDictionary<NSString *, id> *event = [self baseEvent];
     [event addEntriesFromDictionary: @{
       @"url": (navigationAction.request.URL).absoluteString,
       @"navigationType": @(navigationAction.navigationType)
     }];
-
     if (![self.delegate webView:self shouldStartLoadForRequest:event withCallback:_onShouldStartLoadWithRequest]) {
       decisionHandler(WKNavigationActionPolicyCancel);
     }else{
       decisionHandler(WKNavigationActionPolicyAllow);
+      if (_onLoadingStart && ![_webView.URL.absoluteString isEqualToString:prevURL]) {
+        prevURL = _webView.URL.absoluteString;
+        NSMutableDictionary<NSString *, id> *event = [self baseEvent];
+        _onLoadingStart(event);
+      }
     }
+    return;
+  }
+  if (_onLoadingStart && ![_webView.URL.absoluteString isEqualToString:prevURL]) {
+    prevURL = _webView.URL.absoluteString;
+    NSMutableDictionary<NSString *, id> *event = [self baseEvent];
+    _onLoadingStart(event);
   }
   decisionHandler(WKNavigationActionPolicyAllow);
 }
@@ -362,25 +391,18 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
 
 -(void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation{
   NSString *webViewBridgeScriptContent = [self webViewBridgeScript];
-  [webView evaluateJavaScript:webViewBridgeScriptContent completionHandler:^(id webviewScriptResult, NSError * _Nullable webviewScriptError) {
-    if (webviewScriptError) {
-      NSLog(@"WKWebview sendToBridge evaluateJavaScript Error: %@", webviewScriptError);
-      return;
-    }
-
-    if (_injectedJavaScript != nil) {
-      [webView evaluateJavaScript:_injectedJavaScript completionHandler:^(id result, NSError * _Nullable error) {
-        NSString *jsEvaluationValue = (NSString *) result;
-        NSMutableDictionary<NSString *, id> *event = [self baseEvent];
-        event[@"jsEvaluationValue"] = jsEvaluationValue;
-        if (_onLoadingFinish) {
-          _onLoadingFinish(event);
-        }
-      }];
-    } else if (_onLoadingFinish) {
-      _onLoadingFinish([self baseEvent]);
-    }
-  }];
+  if (_injectedJavaScript != nil) {
+    [webView evaluateJavaScript:_injectedJavaScript completionHandler:^(id result, NSError * _Nullable error) {
+      NSString *jsEvaluationValue = (NSString *) result;
+      NSMutableDictionary<NSString *, id> *event = [self baseEvent];
+      event[@"jsEvaluationValue"] = jsEvaluationValue;
+      if (_onLoadingFinish) {
+        _onLoadingFinish(event);
+      }
+    }];
+  } else if (_onLoadingFinish) {
+    _onLoadingFinish([self baseEvent]);
+  }
 }
 
 - (WKWebView *)webView:(WKWebView *)webView createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration forNavigationAction:(WKNavigationAction *)navigationAction windowFeatures:(WKWindowFeatures *)windowFeatures
@@ -411,13 +433,18 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
   //                                                                  encoding:NSUTF8StringEncoding
   //                                                                     error:nil];
 
-  return NSStringMultiline(
+  NSString* js = NSStringMultiline(
+                                   function userScriptKK() {
+                                     ___REPLACE_WITH_USER_SCRIPT___
+                                   }
     (function (window) {
       //Make sure that if WebViewBridge already in scope we don't override it.
       if (window.WebViewBridge) {
+        userScriptKK();
         return;
       }
-
+    window.bakJsonParse = JSON.parse;
+    window.bakJsonStringify = JSON.stringify;
       var RNWBSchema = 'wvb';
       var sendQueue = [];
       var receiveQueue = [];
@@ -479,7 +506,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
         __fetch__: function () {
           //since our sendQueue array only contains string, and our connection to native
           //can only accept string, we need to convert array of strings into single string.
-          var messages = JSON.stringify(sendQueue);
+          var messages = window.bakJsonStringify(sendQueue);
 
           //we make sure that sendQueue is resets
           sendQueue = [];
@@ -509,8 +536,12 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
       //dispatch event
       customEvent.initEvent('WebViewBridge', true, true);
       doc.dispatchEvent(customEvent);
+      userScriptKK();
     })(this);
   );
+  NSString* customUserScript = _userScript ? _userScript : @"";
+  NSLog(@"%@", [js stringByReplacingOccurrencesOfString:@"___REPLACE_WITH_USER_SCRIPT___" withString:customUserScript]);
+  return [js stringByReplacingOccurrencesOfString:@"___REPLACE_WITH_USER_SCRIPT___" withString:customUserScript];
 }
 
 @end
