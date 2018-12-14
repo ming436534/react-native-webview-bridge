@@ -30,6 +30,7 @@ var {
   WebView,
   requireNativeComponent,
   UIManager,
+  Alert,
   NativeModules: {
     WebViewBridgeManager
   }
@@ -106,7 +107,9 @@ class WebViewBridge extends React.Component {
   
     keyboardDisplayRequiresUserAction: PropTypes.bool,
     shouldCache: PropTypes.bool,
-    userScript: PropTypes.string
+    userScript: PropTypes.string,
+    onConfirmDialog: PropTypes.func,
+    onAlert: PropTypes.func,
   }
   statics = {
     JSNavigationScheme: JSNavigationScheme,
@@ -199,6 +202,8 @@ class WebViewBridge extends React.Component {
         onLoadingStart={this.onLoadingStart}
         onLoadingFinish={this.onLoadingFinish}
         onLoadingError={this.onLoadingError}
+        onAlert={this.onAlert}
+        onConfirmDialog={this.onConfirmDialog}
         onShouldStartLoadWithRequest={onShouldStartLoadWithRequest}
         onBridgeMessage={onBridgeMessage}
         shouldCache={this.props.shouldCache || false}
@@ -303,6 +308,33 @@ class WebViewBridge extends React.Component {
     });
     this.updateNavigationState(event);
   }
+  onAlert = ({nativeEvent: {message}}) => {
+    Alert.alert(message, '', [
+      {
+        text: 'OK',
+        onPress: () => {
+          WebViewBridgeManager.resolveAlert(this.getWebViewBridgeHandle());
+        }
+      }
+    ]);
+  }
+  onConfirmDialog = ({nativeEvent: {message}}) => {
+    Alert.alert(message, '', [
+      {
+        text: 'Cancel',
+        style: 'cancel',
+        onPress: () => {
+          WebViewBridgeManager.resolveConfirmDialog(this.getWebViewBridgeHandle(), false);
+        }
+      },
+      {
+        text: 'OK',
+        onPress: () => {
+          WebViewBridgeManager.resolveConfirmDialog(this.getWebViewBridgeHandle(), true);
+        }
+      },
+    ]);
+  }
 }
 
 var RCTWebViewBridge = requireNativeComponent('RCTWebViewBridge', WebViewBridge, {
@@ -310,6 +342,8 @@ var RCTWebViewBridge = requireNativeComponent('RCTWebViewBridge', WebViewBridge,
     onLoadingStart: true,
     onLoadingError: true,
     onLoadingFinish: true,
+    onAlert: true,
+    onConfirmDialog: true,
   },
 });
 

@@ -31,7 +31,6 @@ extern NSString *const RCTJSNavigationScheme;
 - (BOOL)webView:(RCTWebViewBridge *)webView
 shouldStartLoadForRequest:(NSMutableDictionary<NSString *, id> *)request
    withCallback:(RCTDirectEventBlock)callback;
-
 @end
 
 @interface RCTWebViewBridge : RCTView
@@ -52,6 +51,8 @@ shouldStartLoadForRequest:(NSMutableDictionary<NSString *, id> *)request
 - (void)stopLoading;
 - (void)resetSource;
 - (void)unmountWebview;
+- (void)resolveAlert;
+- (void)resolveConfirm:(BOOL)result;
 - (void)sendToBridge:(NSString *)message;
 
 @end

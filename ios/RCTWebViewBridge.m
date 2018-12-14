@@ -74,7 +74,10 @@ NSString *const RCTWebViewBridgeSchema = @"wvb";
 @property (nonatomic, copy) RCTDirectEventBlock onLoadingError;
 @property (nonatomic, copy) RCTDirectEventBlock onShouldStartLoadWithRequest;
 @property (nonatomic, copy) RCTDirectEventBlock onBridgeMessage;
-
+@property (nonatomic, copy) RCTDirectEventBlock onAlert;
+@property (nonatomic, copy) RCTDirectEventBlock onConfirmDialog;
+@property (nonatomic, copy) void (^alertCompletionHandler)();
+@property (nonatomic, copy) void (^confirmCompletionHandler)(BOOL);
 @end
 
 @implementation RCTWebViewBridge
@@ -82,8 +85,9 @@ NSString *const RCTWebViewBridgeSchema = @"wvb";
   WKWebView *_webView;
   NSString *_injectedJavaScript;
   NSString *_userScript;
-  WKUserContentController *_controller;}
+  WKUserContentController *_controller;
   NSString* prevURL;
+}
 
 - (instancetype)initWithFrame:(CGRect)frame
 {
@@ -248,6 +252,14 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
     @"canGoForward" : @(_webView.canGoForward),
   }];
 
+  return event;
+}
+
+- (NSMutableDictionary<NSString *, id> *)alertEvent:(NSString*) message
+{
+  NSMutableDictionary<NSString *, id> *event = [[NSMutableDictionary alloc] initWithDictionary:@{
+   @"message": message,
+   }];
   return event;
 }
 
@@ -423,6 +435,19 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
                                            error:nil];
 }
 
+-(void)webView:(WKWebView *)webView runJavaScriptAlertPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(void))completionHandler{
+  _alertCompletionHandler = completionHandler;
+  _onAlert([self alertEvent:message]);
+}
+- (void)webView:(WKWebView *)webView runJavaScriptConfirmPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(BOOL))completionHandler{
+  _confirmCompletionHandler = completionHandler;
+  _onConfirmDialog([self alertEvent:message]);
+}
+
+- (void)webView:(WKWebView *)webView runJavaScriptTextInputPanelWithPrompt:(NSString *)prompt defaultText:(NSString *)defaultText initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(NSString * _Nullable))completionHandler{
+  
+}
+
 //since there is no easy way to load the static lib resource in ios,
 //we are loading the script from this method.
 - (NSString *)webViewBridgeScript {
@@ -542,6 +567,19 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
   NSString* customUserScript = _userScript ? _userScript : @"";
   NSLog(@"%@", [js stringByReplacingOccurrencesOfString:@"___REPLACE_WITH_USER_SCRIPT___" withString:customUserScript]);
   return [js stringByReplacingOccurrencesOfString:@"___REPLACE_WITH_USER_SCRIPT___" withString:customUserScript];
+}
+
+-(void) resolveAlert {
+  if (_alertCompletionHandler) {
+    _alertCompletionHandler();
+    _alertCompletionHandler = NULL;
+  }
+}
+-(void) resolveConfirm:(BOOL)result {
+  if (_confirmCompletionHandler) {
+    _confirmCompletionHandler(result);
+    _confirmCompletionHandler = NULL;
+  }
 }
 
 @end
