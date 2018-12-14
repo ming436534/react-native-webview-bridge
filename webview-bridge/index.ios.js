@@ -174,7 +174,6 @@ class WebViewBridge extends React.Component {
       const onBridgeMessageCallback = this.props.onBridgeMessage;
       if (onBridgeMessageCallback) {
         const messages = event.nativeEvent.messages;
-        console.log(messages);
         if (messages.forEach) {
           messages.forEach((message) => {
             onBridgeMessageCallback(message);
