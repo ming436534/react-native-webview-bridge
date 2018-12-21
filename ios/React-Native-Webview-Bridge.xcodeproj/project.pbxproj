@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3A1EF9DF21C8D84000A30BD4 /* WKProcessPool+SharedProcessPool.m in Sources */ = {isa = PBXBuildFile; fileRef = 3A1EF9DD21C8D84000A30BD4 /* WKProcessPool+SharedProcessPool.m */; };
 		4114DC5C1C187CCB003CD988 /* RCTWebViewBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = 4114DC591C187CCB003CD988 /* RCTWebViewBridge.m */; };
 		4114DC5D1C187CCB003CD988 /* RCTWebViewBridgeManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 4114DC5B1C187CCB003CD988 /* RCTWebViewBridgeManager.m */; };
 /* End PBXBuildFile section */
@@ -24,6 +25,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		3A1EF9DD21C8D84000A30BD4 /* WKProcessPool+SharedProcessPool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "WKProcessPool+SharedProcessPool.m"; sourceTree = SOURCE_ROOT; };
+		3A1EF9DE21C8D84000A30BD4 /* WKProcessPool+SharedProcessPool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "WKProcessPool+SharedProcessPool.h"; sourceTree = SOURCE_ROOT; };
 		4114DC4C1C187C3A003CD988 /* libReact-Native-Webview-Bridge.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libReact-Native-Webview-Bridge.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4114DC581C187CCB003CD988 /* RCTWebViewBridge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RCTWebViewBridge.h; sourceTree = SOURCE_ROOT; };
 		4114DC591C187CCB003CD988 /* RCTWebViewBridge.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RCTWebViewBridge.m; sourceTree = SOURCE_ROOT; };
@@ -67,6 +70,8 @@
 				4114DC591C187CCB003CD988 /* RCTWebViewBridge.m */,
 				4114DC5A1C187CCB003CD988 /* RCTWebViewBridgeManager.h */,
 				4114DC5B1C187CCB003CD988 /* RCTWebViewBridgeManager.m */,
+				3A1EF9DE21C8D84000A30BD4 /* WKProcessPool+SharedProcessPool.h */,
+				3A1EF9DD21C8D84000A30BD4 /* WKProcessPool+SharedProcessPool.m */,
 			);
 			path = "React-Native-Webview-Bridge";
 			sourceTree = "<group>";
@@ -136,6 +141,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3A1EF9DF21C8D84000A30BD4 /* WKProcessPool+SharedProcessPool.m in Sources */,
 				4114DC5D1C187CCB003CD988 /* RCTWebViewBridgeManager.m in Sources */,
 				4114DC5C1C187CCB003CD988 /* RCTWebViewBridge.m in Sources */,
 			);

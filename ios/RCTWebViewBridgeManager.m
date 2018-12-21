@@ -22,6 +22,8 @@
 
 #import <React/UIView+React.h>
 
+#import "WKProcessPool+SharedProcessPool.h";
+
 @interface RCTWebViewBridgeManager () <RCTWebViewBridgeDelegate>
 
 @end
@@ -36,7 +38,7 @@ RCT_EXPORT_MODULE()
 
 - (UIView *)view
 {
-  RCTWebViewBridge *webView = [[RCTWebViewBridge alloc] init];
+  RCTWebViewBridge *webView = [[RCTWebViewBridge alloc] initWithProcessPool:[WKProcessPool sharedProcessPool]];
   webView.delegate = self;
   return webView;
 }
@@ -47,6 +49,7 @@ RCT_REMAP_VIEW_PROPERTY(scrollEnabled, _webView.scrollView.scrollEnabled, BOOL)
 RCT_REMAP_VIEW_PROPERTY(scalesPageToFit, _webView.scalesPageToFit, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(injectedJavaScript, NSString)
 RCT_EXPORT_VIEW_PROPERTY(userScript, NSString)
+RCT_EXPORT_VIEW_PROPERTY(persistCookies, NSArray)
 RCT_EXPORT_VIEW_PROPERTY(contentInset, UIEdgeInsets)
 RCT_EXPORT_VIEW_PROPERTY(automaticallyAdjustContentInsets, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(hideKeyboardAccessoryView, BOOL)
@@ -170,6 +173,16 @@ RCT_EXPORT_METHOD(resolveAlert:(nonnull NSNumber *)reactTag)
       RCTLogError(@"Invalid view returned from registry, expecting RCTWebViewBridge, got: %@", view);
     } else {
       [view resolveAlert];
+    }
+  }];
+}
+RCT_EXPORT_METHOD(persistingCookies:(nonnull NSNumber *)reactTag resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
+  [self.bridge.uiManager addUIBlock:^(__unused RCTUIManager *uiManager, NSDictionary<NSNumber *, RCTWebViewBridge *> *viewRegistry) {
+    RCTWebViewBridge *view = viewRegistry[reactTag];
+    if (![view isKindOfClass:[RCTWebViewBridge class]]) {
+      RCTLogError(@"Invalid view returned from registry, expecting RCTWebViewBridge, got: %@", view);
+    } else {
+      [view persistingCookies:resolve];
     }
   }];
 }

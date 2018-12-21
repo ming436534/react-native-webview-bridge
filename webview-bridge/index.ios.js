@@ -108,6 +108,7 @@ class WebViewBridge extends React.Component {
     keyboardDisplayRequiresUserAction: PropTypes.bool,
     shouldCache: PropTypes.bool,
     userScript: PropTypes.string,
+    persistCookies: PropTypes.array,
     onConfirmDialog: PropTypes.func,
     onAlert: PropTypes.func,
   }
@@ -266,6 +267,13 @@ class WebViewBridge extends React.Component {
     }
   }
 
+  persistingCookies = async () => {
+    if (this.getWebViewBridgeHandle()) {
+      return await WebViewBridgeManager.persistingCookies(this.getWebViewBridgeHandle());
+    }
+    return null;
+  }
+
   /**
    * We return an event with a bunch of fields including:
    *  url, title, loading, canGoBack, canGoForward
@@ -313,7 +321,10 @@ class WebViewBridge extends React.Component {
       {
         text: 'OK',
         onPress: () => {
-          WebViewBridgeManager.resolveAlert(this.getWebViewBridgeHandle());
+          const h = this.getWebViewBridgeHandle();
+          if (h) {
+            WebViewBridgeManager.resolveAlert(h);
+          }
         }
       }
     ]);
@@ -324,13 +335,19 @@ class WebViewBridge extends React.Component {
         text: 'Cancel',
         style: 'cancel',
         onPress: () => {
-          WebViewBridgeManager.resolveConfirmDialog(this.getWebViewBridgeHandle(), false);
+          const h = this.getWebViewBridgeHandle();
+          if (h) {
+            WebViewBridgeManager.resolveConfirmDialog(h, false);
+          }
         }
       },
       {
         text: 'OK',
         onPress: () => {
-          WebViewBridgeManager.resolveConfirmDialog(this.getWebViewBridgeHandle(), true);
+          const h = this.getWebViewBridgeHandle();
+          if (h) {
+            WebViewBridgeManager.resolveConfirmDialog(h, true);
+          }
         }
       },
     ]);

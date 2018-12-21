@@ -78,6 +78,9 @@ NSString *const RCTWebViewBridgeSchema = @"wvb";
 @property (nonatomic, copy) RCTDirectEventBlock onConfirmDialog;
 @property (nonatomic, copy) void (^alertCompletionHandler)();
 @property (nonatomic, copy) void (^confirmCompletionHandler)(BOOL);
+@property (assign) BOOL sendCookies;
+@property (assign) BOOL useWKCookieStore;
+
 @end
 
 @implementation RCTWebViewBridge
@@ -86,23 +89,42 @@ NSString *const RCTWebViewBridgeSchema = @"wvb";
   NSString *_injectedJavaScript;
   NSString *_userScript;
   WKUserContentController *_controller;
-  NSString* prevURL;
+  BOOL loadEnded;
 }
 
 - (instancetype)initWithFrame:(CGRect)frame
 {
-  if ((self = [super initWithFrame:frame])) {
+  return self = [super initWithFrame:frame];
+}
+- (instancetype)initWithProcessPool:(WKProcessPool *)processPool
+{
+  if(self = [self initWithFrame:CGRectZero]) {
     super.backgroundColor = [UIColor clearColor];
     _automaticallyAdjustContentInsets = YES;
     _contentInset = UIEdgeInsetsZero;
-    [self setupWebview];
+    [self setupWebview:(WKProcessPool *)processPool];
     [self addSubview:_webView];
     _shouldCache = NO;
+    loadEnded = true;
   }
   return self;
 }
 
+
+
 RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
+
+- (void)loadRequest:(NSURLRequest *)request {
+  if (request.URL && _sendCookies) {
+    NSDictionary *cookies = [NSHTTPCookie requestHeaderFieldsWithCookies:[[NSHTTPCookieStorage sharedHTTPCookieStorage] cookiesForURL:request.URL]];
+    if ([cookies objectForKey:@"Cookie"]) {
+      NSMutableURLRequest *mutableRequest = request.mutableCopy;
+      [mutableRequest addValue:cookies[@"Cookie"] forHTTPHeaderField:@"Cookie"];
+      request = mutableRequest;
+    }
+  }
+  [_webView loadRequest:request];
+}
 
 - (void)goForward
 {
@@ -153,33 +175,46 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
 {
   if (![_source isEqualToDictionary:source]) {
     _source = [source copy];
-
-    // Check for a static html source first
-    NSString *html = [RCTConvert NSString:source[@"html"]];
-    if (html) {
-      NSURL *baseURL = [RCTConvert NSURL:source[@"baseUrl"]];
-      [_webView loadHTMLString:html baseURL:baseURL];
-      return;
+    _sendCookies = [source[@"sendCookies"] boolValue];
+    _useWKCookieStore = [source[@"useWKCookieStore"] boolValue];
+    
+    if (_useWKCookieStore) {
+      [self copyCookies:^{
+        [self setSourceToWebView:source];
+      }];
+    } else {
+      [self setSourceToWebView:source];
     }
-
-    NSURLRequest *request = [RCTConvert NSURLRequest:source];
-    NSMutableURLRequest *mutableRequest = [request mutableCopy];
-    if (_shouldCache) mutableRequest.cachePolicy = NSURLRequestReturnCacheDataElseLoad;
-    // Because of the way React works, as pages redirect, we actually end up
-    // passing the redirect urls back here, so we ignore them if trying to load
-    // the same url. We'll expose a call to 'reload' to allow a user to load
-    // the existing page.
-    if ([request.URL isEqual:_webView.URL]) {
-      return;
-    }
-    if (!request.URL) {
-      // Clear the webview
-      [_webView loadHTMLString:@"" baseURL:nil];
-      return;
-    }
-    [_webView loadRequest:mutableRequest];
   }
 }
+
+- (void)setSourceToWebView:(NSDictionary *)source {
+  // Check for a static html source first
+  NSString *html = [RCTConvert NSString:source[@"html"]];
+  if (html) {
+    NSURL *baseURL = [RCTConvert NSURL:source[@"baseUrl"]];
+    [_webView loadHTMLString:html baseURL:baseURL];
+    return;
+  }
+  
+  NSURLRequest *request = [RCTConvert NSURLRequest:source];
+  NSMutableURLRequest *mutableRequest = [request mutableCopy];
+  if (_shouldCache) mutableRequest.cachePolicy = NSURLRequestReturnCacheDataElseLoad;
+  // Because of the way React works, as pages redirect, we actually end up
+  // passing the redirect urls back here, so we ignore them if trying to load
+  // the same url. We'll expose a call to 'reload' to allow a user to load
+  // the existing page.
+  if ([request.URL isEqual:_webView.URL]) {
+    return;
+  }
+  if (!request.URL) {
+    // Clear the webview
+    [_webView loadHTMLString:@"" baseURL:nil];
+    return;
+  }
+  [self loadRequest:mutableRequest];
+}
+
 -(void)setUserScript:(NSString *)userScript {
   _userScript = userScript;
   WKUserScript* generated = [[WKUserScript alloc] initWithSource:[self webViewBridgeScript] injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:true];
@@ -188,7 +223,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
 
 - (void)resetSource
 {
-    [_webView loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"about:blank"]]];
+    [self loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"about:blank"]]];
     // Check for a static html source first
     NSString *html = [RCTConvert NSString:_source[@"html"]];
     if (html) {
@@ -213,7 +248,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
         [_webView loadHTMLString:@"" baseURL:nil];
         return;
     }
-    [_webView loadRequest:mutableRequest];
+    [self loadRequest:mutableRequest];
 }
 
 - (void)layoutSubviews
@@ -262,7 +297,6 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
    }];
   return event;
 }
-
 - (void)refreshContentInset
 {
   [RCTView autoAdjustInsetsForView:self
@@ -303,9 +337,10 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
 
 #pragma mark - WebKit WebView Setup and JS Handler
 
--(void)setupWebview {
+-(void)setupWebview:(WKProcessPool *)processPool {
   WKWebViewConfiguration *theConfiguration = [[WKWebViewConfiguration alloc] init];
-  WKUserContentController *controller = [[WKUserContentController alloc]init];
+  theConfiguration.processPool = processPool;
+  WKUserContentController *controller = [[WKUserContentController alloc] init];
   _controller = controller;
   [controller addScriptMessageHandler:[[_LeakAvoider alloc] init:self] name:@"observe"];
   WKUserScript* userScript = [[WKUserScript alloc] initWithSource:[self webViewBridgeScript] injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:true];
@@ -328,6 +363,10 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
 }
 
 -(void)userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message{
+  if ([message.body containsString:@"FORCE_TRIGGER_LOAD_END"]) {
+    [self loadFinish];
+    return;
+  }
   if ([message.body rangeOfString:RCTWebViewBridgeSchema].location == NSNotFound) {
     NSMutableDictionary<NSString *, id> *onBridgeMessageEvent = [[NSMutableDictionary alloc] initWithDictionary:@{
       @"messages": [self stringArrayJsonToArray: message.body]
@@ -349,6 +388,55 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
   }];
 }
 
+- (void) persistingCookies:(RCTPromiseResolveBlock)resolve {
+  if (@available(ios 11,*)) {
+    if (_persistCookies != nil && _persistCookies.count > 0) {
+      NSArray* persistCookies = [_persistCookies copy];
+      dispatch_async(dispatch_get_main_queue(), ^(){
+        WKHTTPCookieStore *cookieStore = [[WKWebsiteDataStore defaultDataStore] httpCookieStore];
+        [cookieStore getAllCookies:^(NSArray<NSHTTPCookie *> *allCookies) {
+          for (NSHTTPCookie* cookie in allCookies) {
+            for (NSDictionary* pc in persistCookies) {
+              NSString* name = pc[@"name"];
+              NSString* domain = pc[@"domain"];
+              BOOL shouldPersist = false;
+              if (name == nil) {
+                shouldPersist = [cookie.domain containsString:domain];
+              } else {
+                shouldPersist = [cookie.domain containsString:domain] && [name isEqualToString:cookie.name];
+              }
+              if (shouldPersist) {
+                NSMutableDictionary *cookieProperties = [NSMutableDictionary dictionary];
+                [cookieProperties setObject:cookie.name forKey:NSHTTPCookieName];
+                [cookieProperties setObject:cookie.value forKey:NSHTTPCookieValue];
+                [cookieProperties setObject:cookie.domain forKey:NSHTTPCookieDomain];
+                [cookieProperties setObject:cookie.path forKey:NSHTTPCookiePath];
+                if (cookie.version > 0) {
+                  NSString* cookieVersion = [NSString stringWithFormat:@"%ld", cookie.version];
+                  [cookieProperties setObject:cookieVersion forKey:NSHTTPCookieVersion];
+                }
+                if (cookie.secure) {
+                  [cookieProperties setObject:[NSNumber numberWithBool:true] forKey:NSHTTPCookieSecure];
+                }
+                if (cookie.expiresDate != nil) {
+                  [cookieProperties setObject:cookie.expiresDate forKey:NSHTTPCookieExpires];
+                } else {
+                  [cookieProperties setObject:[NSDate dateWithTimeIntervalSinceNow:3 * 60 * 60] forKey:NSHTTPCookieExpires];
+                }
+                NSHTTPCookie* newCookie = [NSHTTPCookie cookieWithProperties:cookieProperties];
+                [[NSHTTPCookieStorage sharedHTTPCookieStorage] setCookie:newCookie];
+              }
+            }
+          }
+          resolve(nil);
+        }];
+      });
+    }
+  } else {
+    resolve(nil);
+  }
+}
+
 #pragma mark - WebKit WebView Delegate methods
 
 - (void)webView:(WKWebView *)webView didStartProvisionalNavigation:(WKNavigation *)navigation{
@@ -365,20 +453,33 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
       decisionHandler(WKNavigationActionPolicyCancel);
     }else{
       decisionHandler(WKNavigationActionPolicyAllow);
-      if (_onLoadingStart && ![_webView.URL.absoluteString isEqualToString:prevURL]) {
-        prevURL = _webView.URL.absoluteString;
+      if (_onLoadingStart && [navigationAction.request.URL isEqual:navigationAction.request.mainDocumentURL]) {
         NSMutableDictionary<NSString *, id> *event = [self baseEvent];
+        loadEnded = false;
         _onLoadingStart(event);
       }
     }
     return;
   }
-  if (_onLoadingStart && ![_webView.URL.absoluteString isEqualToString:prevURL]) {
-    prevURL = _webView.URL.absoluteString;
+  NSURLRequest *request = navigationAction.request;
+  BOOL isTopFrame = [request.URL isEqual:request.mainDocumentURL];
+  if (_onLoadingStart && isTopFrame) {
     NSMutableDictionary<NSString *, id> *event = [self baseEvent];
+    loadEnded = false;
     _onLoadingStart(event);
   }
   decisionHandler(WKNavigationActionPolicyAllow);
+}
+
+- (void)webView:(WKWebView *)webView decidePolicyForNavigationResponse:(WKNavigationResponse *)navigationResponse decisionHandler:(void (^)(WKNavigationResponsePolicy))decisionHandler {
+  if (_sendCookies) {
+    NSHTTPURLResponse *response = (NSHTTPURLResponse *)navigationResponse.response;
+    NSArray *cookies = [NSHTTPCookie cookiesWithResponseHeaderFields:[response allHeaderFields] forURL:response.URL];
+    for (NSHTTPCookie *cookie in cookies) {
+      [[NSHTTPCookieStorage sharedHTTPCookieStorage] setCookie:cookie];
+    }
+  }
+  decisionHandler(WKNavigationResponsePolicyAllow);
 }
 
 -(void)webView:(WKWebView *)webView didFailNavigation:(WKNavigation *)navigation withError:(NSError *)error{
@@ -402,9 +503,15 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
 }
 
 -(void)webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation{
-  NSString *webViewBridgeScriptContent = [self webViewBridgeScript];
+  if (!loadEnded) {
+    [self loadFinish];
+  }
+}
+
+-(void) loadFinish {
+  loadEnded = true;
   if (_injectedJavaScript != nil) {
-    [webView evaluateJavaScript:_injectedJavaScript completionHandler:^(id result, NSError * _Nullable error) {
+    [_webView evaluateJavaScript:_injectedJavaScript completionHandler:^(id result, NSError * _Nullable error) {
       NSString *jsEvaluationValue = (NSString *) result;
       NSMutableDictionary<NSString *, id> *event = [self baseEvent];
       event[@"jsEvaluationValue"] = jsEvaluationValue;
@@ -420,7 +527,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
 - (WKWebView *)webView:(WKWebView *)webView createWebViewWithConfiguration:(WKWebViewConfiguration *)configuration forNavigationAction:(WKNavigationAction *)navigationAction windowFeatures:(WKWindowFeatures *)windowFeatures
 {
   if (!navigationAction.targetFrame.isMainFrame) {
-    [webView loadRequest:navigationAction.request];
+    [self loadRequest:navigationAction.request];
   }
 
   return nil;
@@ -444,8 +551,23 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
   _onConfirmDialog([self alertEvent:message]);
 }
 
-- (void)webView:(WKWebView *)webView runJavaScriptTextInputPanelWithPrompt:(NSString *)prompt defaultText:(NSString *)defaultText initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(NSString * _Nullable))completionHandler{
+- (void)webView:(WKWebView *)webView runJavaScriptTextInputPanelWithPrompt:(NSString *)prompt defaultText:(NSString *)defaultText initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(NSString *))completionHandler {
   
+  UIAlertController *alertController = [UIAlertController alertControllerWithTitle:prompt message:nil preferredStyle:UIAlertControllerStyleAlert];
+  [alertController addTextFieldWithConfigurationHandler:^(UITextField *textField) {
+    textField.text = defaultText;
+  }];
+  
+  [alertController addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"OK", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+    NSString *input = ((UITextField *)alertController.textFields.firstObject).text;
+    completionHandler(input);
+  }]];
+  
+  [alertController addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"Cancel", nil) style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
+    completionHandler(nil);
+  }]];
+  UIViewController *presentingController = RCTPresentedViewController();
+  [presentingController presentViewController:alertController animated:YES completion:nil];
 }
 
 //since there is no easy way to load the static lib resource in ios,
@@ -459,17 +581,14 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
   //                                                                     error:nil];
 
   NSString* js = NSStringMultiline(
-                                   function userScriptKK() {
-                                     ___REPLACE_WITH_USER_SCRIPT___
-                                   }
+     function userScriptKK() {
+       ___REPLACE_WITH_USER_SCRIPT___
+     }
     (function (window) {
       //Make sure that if WebViewBridge already in scope we don't override it.
       if (window.WebViewBridge) {
-        userScriptKK();
         return;
       }
-    window.bakJsonParse = JSON.parse;
-    window.bakJsonStringify = JSON.stringify;
       var RNWBSchema = 'wvb';
       var sendQueue = [];
       var receiveQueue = [];
@@ -557,12 +676,11 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
       };
 
       window.WebViewBridge = WebViewBridge;
-
       //dispatch event
       customEvent.initEvent('WebViewBridge', true, true);
       doc.dispatchEvent(customEvent);
-      userScriptKK();
     })(this);
+    userScriptKK();
   );
   NSString* customUserScript = _userScript ? _userScript : @"";
   NSLog(@"%@", [js stringByReplacingOccurrencesOfString:@"___REPLACE_WITH_USER_SCRIPT___" withString:customUserScript]);
@@ -575,11 +693,72 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
     _alertCompletionHandler = NULL;
   }
 }
+-(void)setAllowsLinkPreview:(BOOL)allowsLinkPreview
+{
+  if ([_webView respondsToSelector:@selector(allowsLinkPreview)]) {
+    _webView.allowsLinkPreview = allowsLinkPreview;
+  }
+}
 -(void) resolveConfirm:(BOOL)result {
   if (_confirmCompletionHandler) {
     _confirmCompletionHandler(result);
     _confirmCompletionHandler = NULL;
   }
+}
+
+- (NSString *) cookieDescription:(NSHTTPCookie *)cookie {
+  
+  NSMutableString *cDesc = [[NSMutableString alloc] init];
+  [cDesc appendFormat:@"%@=%@;",
+   [[cookie name] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding],
+   [[cookie value] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+  if ([cookie.domain length] > 0)
+    [cDesc appendFormat:@"domain=%@;", [cookie domain]];
+  if ([cookie.path length] > 0)
+    [cDesc appendFormat:@"path=%@;", [cookie path]];
+  if (cookie.expiresDate != nil)
+    [cDesc appendFormat:@"expiresDate=%@;", [cookie expiresDate]];
+  if (cookie.HTTPOnly == YES)
+    [cDesc appendString:@"HttpOnly;"];
+  if (cookie.secure == YES)
+    [cDesc appendString:@"Secure;"];
+  
+  
+  return cDesc;
+}
+
+- (void) copyCookies:(void (^)(void))completionHandler {
+  if (@available(ios 11,*)) {
+    
+    // The webView websiteDataStore only gets initialized, when needed. Setting cookies on the dataStore's
+    // httpCookieStore doesn't seem to initialize it. That's why fetchDataRecordsOfTypes is called.
+    // All the cookies of the sharedHttpCookieStorage, which is used in react-native-cookie,
+    // are copied to the webSiteDataStore's httpCookieStore.
+    // https://bugs.webkit.org/show_bug.cgi?id=185483
+    NSHTTPCookieStorage* storage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+    NSArray* array = [storage cookies];
+    [_webView.configuration.websiteDataStore fetchDataRecordsOfTypes:[NSSet<NSString *> setWithObject:WKWebsiteDataTypeCookies] completionHandler:^(NSArray<WKWebsiteDataRecord *> *records) {
+      for (NSHTTPCookie* cookie in array) {
+        [_webView.configuration.websiteDataStore.httpCookieStore setCookie:cookie completionHandler:nil];
+      }
+    }];
+    completionHandler();
+  } else {
+    // Create WKUserScript for each cookie
+    // Cookies are injected with Javascript AtDocumentStart
+    NSHTTPCookieStorage* storage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+    NSArray* array = [storage cookies];
+    for (NSHTTPCookie* cookie in array){
+      NSString* cookieSource = [NSString stringWithFormat:@"document.cookie = '%@'", [self cookieDescription:cookie]];
+      WKUserScript* cookieScript = [[WKUserScript alloc]
+                                    initWithSource:cookieSource
+                                    injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:NO];
+      [_webView.configuration.userContentController addUserScript:cookieScript];
+    }
+  }
+}
+- (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView {
+  RCTLogWarn(@"Webview Process Terminated");
 }
 
 @end

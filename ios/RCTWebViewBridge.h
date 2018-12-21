@@ -15,6 +15,7 @@
 #import "RCTView.h"
 #endif
 
+#import <WebKit/WebKit.h>
 
 @class RCTWebViewBridge;
 
@@ -35,9 +36,12 @@ shouldStartLoadForRequest:(NSMutableDictionary<NSString *, id> *)request
 
 @interface RCTWebViewBridge : RCTView
 
+- (instancetype)initWithProcessPool:(WKProcessPool *)processPool;
+
 @property (nonatomic, weak) id<RCTWebViewBridgeDelegate> delegate;
 
 @property (nonatomic, copy) NSDictionary *source;
+@property (nonatomic, copy) NSArray *persistCookies;
 @property (nonatomic, assign) UIEdgeInsets contentInset;
 @property (nonatomic, assign) BOOL automaticallyAdjustContentInsets;
 @property (nonatomic, assign) BOOL hideKeyboardAccessoryView;
@@ -54,5 +58,6 @@ shouldStartLoadForRequest:(NSMutableDictionary<NSString *, id> *)request
 - (void)resolveAlert;
 - (void)resolveConfirm:(BOOL)result;
 - (void)sendToBridge:(NSString *)message;
+- (void)persistingCookies:(RCTPromiseResolveBlock)resolve;
 
 @end
