@@ -589,6 +589,8 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
       if (window.WebViewBridge) {
         return;
       }
+    window.bakJsonParse = JSON.parse;
+    window.bakJsonStringify = JSON.stringify;
       var RNWBSchema = 'wvb';
       var sendQueue = [];
       var receiveQueue = [];
