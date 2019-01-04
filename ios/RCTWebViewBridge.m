@@ -92,6 +92,18 @@ NSString *const RCTWebViewBridgeSchema = @"wvb";
   BOOL loadEnded;
 }
 
+//- (instancetype)initWithFrame:(CGRect)frame
+//{
+//  if ((self = [super initWithFrame:frame])) {
+//    super.backgroundColor = [UIColor clearColor];
+//    _automaticallyAdjustContentInsets = YES;
+//    _contentInset = UIEdgeInsetsZero;
+//    [self setupWebview];
+//    [self addSubview:_webView];
+//    _shouldCache = NO;
+//  }
+//  return self;
+//}
 - (instancetype)initWithFrame:(CGRect)frame
 {
   return self = [super initWithFrame:frame];
@@ -443,18 +455,17 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
 }
 
 -(void)webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler{
+  NSMutableDictionary<NSString *, id> *event = [self baseEvent];
+  [event addEntriesFromDictionary: @{
+    @"navigationType": @(navigationAction.navigationType)
+  }];
+  event[@"url"] = (navigationAction.request.URL).absoluteString;
   if (_onShouldStartLoadWithRequest) {
-    NSMutableDictionary<NSString *, id> *event = [self baseEvent];
-    [event addEntriesFromDictionary: @{
-      @"url": (navigationAction.request.URL).absoluteString,
-      @"navigationType": @(navigationAction.navigationType)
-    }];
     if (![self.delegate webView:self shouldStartLoadForRequest:event withCallback:_onShouldStartLoadWithRequest]) {
       decisionHandler(WKNavigationActionPolicyCancel);
     }else{
       decisionHandler(WKNavigationActionPolicyAllow);
       if (_onLoadingStart && [navigationAction.request.URL isEqual:navigationAction.request.mainDocumentURL]) {
-        NSMutableDictionary<NSString *, id> *event = [self baseEvent];
         loadEnded = false;
         _onLoadingStart(event);
       }
@@ -464,7 +475,6 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
   NSURLRequest *request = navigationAction.request;
   BOOL isTopFrame = [request.URL isEqual:request.mainDocumentURL];
   if (_onLoadingStart && isTopFrame) {
-    NSMutableDictionary<NSString *, id> *event = [self baseEvent];
     loadEnded = false;
     _onLoadingStart(event);
   }
@@ -581,6 +591,8 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
   //                                                                     error:nil];
 
   NSString* js = NSStringMultiline(
+     window.bakJsonStringify = JSON.stringify;
+     window.bakJsonParse = JSON.parse;
      function userScriptKK() {
        ___REPLACE_WITH_USER_SCRIPT___
      }
@@ -589,8 +601,6 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
       if (window.WebViewBridge) {
         return;
       }
-    window.bakJsonParse = JSON.parse;
-    window.bakJsonStringify = JSON.stringify;
       var RNWBSchema = 'wvb';
       var sendQueue = [];
       var receiveQueue = [];
