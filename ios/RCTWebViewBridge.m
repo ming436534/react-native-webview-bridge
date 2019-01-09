@@ -371,6 +371,14 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
   [_webView stopLoading];
   [_controller removeAllUserScripts];
   [_controller removeScriptMessageHandlerForName:@"observe"];
+    if (_alertCompletionHandler != NULL) {
+        _alertCompletionHandler();
+        _alertCompletionHandler = NULL;
+    }
+    if (_confirmCompletionHandler != NULL) {
+        _confirmCompletionHandler(false);
+        _confirmCompletionHandler = NULL;
+    }
   _controller = NULL;
 }
 
@@ -553,12 +561,35 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
 }
 
 -(void)webView:(WKWebView *)webView runJavaScriptAlertPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(void))completionHandler{
-  _alertCompletionHandler = completionHandler;
-  _onAlert([self alertEvent:message]);
+  if (_handleAlertNative) {
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:message message:nil preferredStyle:UIAlertControllerStyleAlert];
+    
+    [alertController addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"Close", nil) style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
+      completionHandler();
+    }]];
+    UIViewController *presentingController = RCTPresentedViewController();
+    [presentingController presentViewController:alertController animated:YES completion:nil];
+  } else {
+    _alertCompletionHandler = completionHandler;
+    _onAlert([self alertEvent:message]);
+  }
 }
 - (void)webView:(WKWebView *)webView runJavaScriptConfirmPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(BOOL))completionHandler{
-  _confirmCompletionHandler = completionHandler;
-  _onConfirmDialog([self alertEvent:message]);
+  if (_handleAlertNative) {
+    UIAlertController *alertController = [UIAlertController alertControllerWithTitle:message message:nil preferredStyle:UIAlertControllerStyleAlert];
+    [alertController addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"OK", nil) style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+      completionHandler(YES);
+    }]];
+    [alertController addAction:[UIAlertAction actionWithTitle:NSLocalizedString(@"Cancel", nil) style:UIAlertActionStyleCancel handler:^(UIAlertAction *action) {
+      completionHandler(NO);
+    }]];
+    UIViewController *presentingController = RCTPresentedViewController();
+    [presentingController presentViewController:alertController animated:YES completion:nil];
+  } else {
+    _confirmCompletionHandler = completionHandler;
+    _onConfirmDialog([self alertEvent:message]);
+  }
+  
 }
 
 - (void)webView:(WKWebView *)webView runJavaScriptTextInputPanelWithPrompt:(NSString *)prompt defaultText:(NSString *)defaultText initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(NSString *))completionHandler {

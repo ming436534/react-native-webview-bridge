@@ -111,6 +111,7 @@ class WebViewBridge extends React.Component {
     persistCookies: PropTypes.array,
     onConfirmDialog: PropTypes.func,
     onAlert: PropTypes.func,
+    handleAlertNative: PropTypes.bool,
   }
   statics = {
     JSNavigationScheme: JSNavigationScheme,
