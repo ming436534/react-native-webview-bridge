@@ -784,8 +784,8 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
       for (NSHTTPCookie* cookie in array) {
         [_webView.configuration.websiteDataStore.httpCookieStore setCookie:cookie completionHandler:nil];
       }
+      completionHandler();
     }];
-    completionHandler();
   } else {
     // Create WKUserScript for each cookie
     // Cookies are injected with Javascript AtDocumentStart
@@ -798,6 +798,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
                                     injectionTime:WKUserScriptInjectionTimeAtDocumentStart forMainFrameOnly:NO];
       [_webView.configuration.userContentController addUserScript:cookieScript];
     }
+    completionHandler();
   }
 }
 - (void)webViewWebContentProcessDidTerminate:(WKWebView *)webView {
