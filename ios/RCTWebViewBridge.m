@@ -135,7 +135,33 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
       request = mutableRequest;
     }
   }
-  [_webView loadRequest:request];
+  if ([request.HTTPMethod isEqualToString:@"POST"] && request.HTTPBody.length > 0) {
+    NSString* postData = [NSString stringWithUTF8String:[request.HTTPBody bytes]];
+    NSString* js = NSStringMultiline(
+     var params = "%@";
+     var method = "post";
+     var form = document.createElement("form");
+     form.setAttribute("method", method);
+     form.setAttribute("action", "%@");
+     var keyValue = params.split("&");
+     for (var i = 0; i < keyValue.length; i++) {
+       var keyValueArray = keyValue[i].split("=");
+       var hiddenField = document.createElement("input");
+       hiddenField.setAttribute("type", "hidden");
+       hiddenField.setAttribute("name", keyValueArray[0]);
+       hiddenField.setAttribute("value", keyValueArray[1]);
+       form.appendChild(hiddenField);
+     }
+     document.body.appendChild(form);
+     form.submit();
+    );
+    NSString *jscript = [NSString stringWithFormat:js, postData, request.URL.absoluteString];
+    [_webView evaluateJavaScript:jscript completionHandler:^(id object, NSError * _Nullable error) {
+      NSLog(@"%@", error);
+    }];
+  } else {
+    [_webView loadRequest:request];
+  }
 }
 
 - (void)goForward
@@ -252,9 +278,9 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
     // passing the redirect urls back here, so we ignore them if trying to load
     // the same url. We'll expose a call to 'reload' to allow a user to load
     // the existing page.
-//    if ([request.URL isEqual:_webView.request.URL]) {
-//        return;
-//    }
+    // if ([request.URL isEqual:_webView.request.URL]) {
+    //   return;
+    // }
     if (!request.URL) {
         // Clear the webview
         [_webView loadHTMLString:@"" baseURL:nil];
