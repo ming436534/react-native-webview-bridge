@@ -153,45 +153,54 @@ class WebViewBridge extends React.Component {
   };
 
   goForward = () => {
+    const handle = this.getWebViewBridgeHandle();
+    if (!handle) return;
     UIManager.dispatchViewManagerCommand(
-      this.getWebViewBridgeHandle(),
+      handle,
       UIManager.RCTWebViewBridge.Commands.goForward,
       null
     );
   };
 
   goBack = () => {
+    const handle = this.getWebViewBridgeHandle();
+    if (!handle) return;
     UIManager.dispatchViewManagerCommand(
-      this.getWebViewBridgeHandle(),
+      handle,
       UIManager.RCTWebViewBridge.Commands.goBack,
       null
     );
   };
 
   resetSource = () => {
+    const handle = this.getWebViewBridgeHandle();
+    if (!handle) return;
     UIManager.dispatchViewManagerCommand(
-      this.getWebViewBridgeHandle(),
+      handle,
       UIManager.RCTWebViewBridge.Commands.resetSource,
       null
     );
   }
 
   stopLoading = () => {
+    const handle = this.getWebViewBridgeHandle();
+    if (!handle) return;
     UIManager.dispatchViewManagerCommand(
-      this.getWebViewBridgeHandle(),
+      handle,
       UIManager.RCTWebViewBridge.Commands.stopLoading,
       null
     );
   }
 
   reload = () => {
+    const handle = this.getWebViewBridgeHandle();
+    if (!handle) return;
     UIManager.dispatchViewManagerCommand(
-      this.getWebViewBridgeHandle(),
+      handle,
       UIManager.RCTWebViewBridge.Commands.reload,
       null
     );
   };
-
   sendToBridge =  (message: string) => {
     const handle = this.getWebViewBridgeHandle();
     if (handle) {
