@@ -220,46 +220,61 @@ class WebViewBridge extends React.Component {
   }
 
   goForward = () => {
-    UIManager.dispatchViewManagerCommand(
-      this.getWebViewBridgeHandle(),
-      UIManager.RCTWebViewBridge.Commands.goForward,
-      null
-    );
+    const handle = this.getWebViewBridgeHandle();
+    if (handle) {
+      UIManager.dispatchViewManagerCommand(
+        handle,
+        UIManager.RCTWebViewBridge.Commands.goForward,
+        null
+      );
+    }
   }
 
   goBack = () => {
-    UIManager.dispatchViewManagerCommand(
-      this.getWebViewBridgeHandle(),
-      UIManager.RCTWebViewBridge.Commands.goBack,
-      null
-    );
+    const handle = this.getWebViewBridgeHandle();
+    if (handle) {
+      UIManager.dispatchViewManagerCommand(
+        handle,
+        UIManager.RCTWebViewBridge.Commands.goBack,
+        null
+      );
+    }
   }
 
   reload = () => {
-    UIManager.dispatchViewManagerCommand(
-      this.getWebViewBridgeHandle(),
-      UIManager.RCTWebViewBridge.Commands.reload,
-      null
-    );
+    const handle = this.getWebViewBridgeHandle();
+    if (handle) {
+      UIManager.dispatchViewManagerCommand(
+        handle,
+        UIManager.RCTWebViewBridge.Commands.reload,
+        null
+      );
+    }
   }
 
   /**
    * Stop loading the current page.
    */
   stopLoading = () => {
-    UIManager.dispatchViewManagerCommand(
-      this.getWebViewBridgeHandle(),
-      UIManager.RCTWebViewBridge.Commands.stopLoading,
-      null
-    );
+    const handle = this.getWebViewBridgeHandle();
+    if (handle) {
+      UIManager.dispatchViewManagerCommand(
+        handle,
+        UIManager.RCTWebViewBridge.Commands.stopLoading,
+        null
+      );
+    }
   };
 
   resetSource = () => {
-    UIManager.dispatchViewManagerCommand(
-      this.getWebViewBridgeHandle(),
-      UIManager.RCTWebViewBridge.Commands.resetSource,
-      null
-    );
+    const handle = this.getWebViewBridgeHandle();
+    if (handle) {
+      UIManager.dispatchViewManagerCommand(
+        this.getWebViewBridgeHandle(),
+        UIManager.RCTWebViewBridge.Commands.resetSource,
+        null
+      );
+    }
   }
 
   sendToBridge = (message: string) => {
