@@ -148,7 +148,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
        var keyValueArray = keyValue[i].split("=");
        var hiddenField = document.createElement("input");
        hiddenField.setAttribute("type", "hidden");
-       hiddenField.setAttribute("name", keyValueArray[0]);
+       hiddenField.setAttribute("name", keyValueArray[0] || "");
        hiddenField.setAttribute("value", keyValueArray[1]);
        form.appendChild(hiddenField);
      }
